@@ -109,7 +109,7 @@ perform InstanceBuilder with intance_configuration_type_2
 perform autoscaling_type1 with intance_configuration_type_1
 
 ## Conditional Statements
-on find CPUUtilization of find name of intance_configuration_type_2 gt scale_up_factor + scale_trashold perform EmailSender with Template as CPUUsageWarning and Subject as "CPU Usage Warning"
+on find CPUUtilization of find name of intance_configuration_type_2 gt scale_up_factor + scale_trashold perform EmailSender with Template as CPUUsageWarning and Subject as "Type 2 - CPU Usage Warning"
 
 # Must have END mark
 END BUILD
