@@ -1,8 +1,16 @@
 # APS - Lógica da Computação
 
+**Feito por:** Francisco Pinheiro Janela
+
 ## 1. Introdução
 
+Esta linguagem será desenvolvida com o intuito de facilitar a criação de infraestruturas na AWS. 
+
+Definido o contexto e a aplicação, as próximas etapas serão de construção efetiva da linguagem, passando pela criação de um exemplo de linguagem que irá facilitar a conversão para a EBNF. Com a EBNF será possível desenvolver o diagrama sintático e posteriormente o compilador.
+
 ## 2. EBNF
+
+Utilizando o exemplo de linguagem, a EBNF resultante para a linguagem é a seguinte:
 
 ```bash
 BLOCK = { STATEMENT };
@@ -114,3 +122,28 @@ on find CPUUtilization of find name of intance_configuration_type_2 gt scale_up_
 # Must have END mark
 END BUILD
 ```
+
+Vale ressaltar alguns detalhes importantes:
+
+1. Existem variáveis que precisam ser inseridas no arquivo, uma vez que são estas que irão compor os meta-dados obrigatórios.
+<br/>
+
+2. Existem apenas 2 tipos de variáveis: `string` e `number`. Além disso, elas podem constituir uma lista, de um único tipo.
+<br/>
+
+3. É possível complementar a linguagem e as variáveis com a função load, que poderá carregar arquivos externos. Um uso que será de extrema importância é o carregamento de arquivos JSON, que serão utilizados para a criação de instâncias, subnets, security groups, etc. Isto ocorre pois estes podem conter as informações para as variáveis dependentes das funções.
+<br/>
+
+4. Não é possível criar funções genéricas, elas já são pré-definidas, no entanto, dá-se a possibilidade de usar a declaração de função para poder predefinir alguns parâmetros essenciais e reformatar as necessidades da função base, dando a ela um novo identificador.
+<br/>
+
+5. A linguagem não possui um tipo de dado booleano, mas é possível utilizar as comparações para obter o mesmo resultado. Vale lembrar que não é possível utilizar a resposta negativa da comparação, como seria nas linguagens de programação.
+<br/>
+
+6. A preposição `perform` será a base para definir a execução de uma ação.
+<br/>
+
+7. A preposição `find` será a base para encontrar métricas específicas da infraestrutura, como por exemplo, a CPUUtilization de uma instância específica, mas também para encontrar o valor de um identificador de dentro de um JSON, caso haja necessidade. As métricas específicas possuem uma necessidade específica para encontrarem o que se procura, devendo ser respeitada depois do `of`, no exemplo acima, a métrica é `CPUUtilization` e precisa do nome da instância para coletar as suas informações.
+<br/>
+
+8. O `loop` existente na linguagem é o `for each`, que é utilizado para percorrer uma lista ou um JSON de valores e executar uma ação para cada um deles.
