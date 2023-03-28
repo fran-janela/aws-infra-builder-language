@@ -1,0 +1,47 @@
+BLOCK = { STATEMENT };
+
+STATEMENT = [ DECLARATION | ( "START BUILD", { BUILD_STATEMENT }, "END BUILD" ) ], "\n";
+
+DECLARATION = ( ASSIGNMENT | ("f", ":", FUNCTION_DECLARATION) );
+
+ASSIGNMENT = ( IDENTIFIER, "is", ( VALUE | ( "list", "of", { VALUE } ) | ( "load" , STRING ) | IDENTIFIER ) )
+
+FUNCTION_DECLARATION = FUNCTION_TYPE, "as", IDENTIFIER, [ "needs", { IDENTIFIER } ], "with", ( ( FUNCTION_VARIABLE_DECLARATION, { "and", FUNCTION_VARIABLE_DECLARATION } ) | ( "\n", FUNCTION_VARIABLE_DECLARATION, "\n", { "and", FUNCTION_VARIABLE_DECLARATION, "\n" }, "end" ) ) ;
+
+FUNCTION_VARIABLE_DECLARATION = IDENTIFIER, "as", ( VALUE | IDENTIFIER );
+
+BUILD_STATEMENT = ( LOOP_STATEMENT | CONDITIONAL_STATEMENT | PERFORM_STATEMENT );
+
+LOOP_STATEMENT = "for", "each", IDENTIFIER, "in", IDENTIFIER, PERFORM_STATEMENT;
+
+CONDITIONAL_STATEMENT = "on", CONDITION, PERFORM_STATEMENT;
+
+PERFORM_STATEMENT = "perform", ( IDENTIFIER | FUNCTION_TYPE ), [ "with", FUNCTION_VARIABLE_DECLARATION, { FUNCTION_VARIABLE_DECLARATION } ];
+
+CONDITION = ( ( IDENTIFIER | VALUE | FIND ), COMPARE_METHODS, ( IDENTIFIER | VALUE | FIND ) );
+
+COMPARE_METHODS = ( "gt" | "lt" | "et" | "net" | "gte" | "lte" );
+
+FUNCTION_TYPE = ( "AutoScaleBuilder" | "LoadBalancerBuilder" | "InstanceBuilder" | "SubnetBuilder" | "SecurityGroupBuilder" | "EmailSender" );
+
+FIND = "find", IDENTIFIER, "of", ( FIND | IDENTIFIER );
+
+VALUE = ( STRING | EXPRESSION );
+
+EXPRESSION = TERM, { ("+" | "-"), TERM } ;
+
+TERM = FACTOR, { "*", FACTOR } ;
+
+FACTOR = NUMBER | "(", EXPRESSION, ")" | IDENTIFIER ;
+
+IDENTIFIER = ( LETTER, { LETTER | DIGIT | "_" } ) | (KNOWN_IDENTIFIERS);
+
+KNOWN_IDENTIFIERS = ( "CPUUtilization" | "RAMUsage" | "AvailableMemorySpace" );
+
+STRING = '"', { LETTER | DIGIT | " " | "." | "," | ":" | ";" | "-" | "_" | "/" | "\\" | "!" | "?" | "@" | "#" | "$" | "%" | "&" | "*" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "=" | "+" | "~" | "^" | "`" }, '"' ;
+
+NUMBER = DIGIT, { DIGIT } ;
+
+LETTER = ( a | ... | z | A | ... | Z ) ;
+
+DIGIT = ( 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 ) ;
