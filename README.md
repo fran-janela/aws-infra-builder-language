@@ -21,7 +21,7 @@ DECLARATION = ( ASSIGNMENT | ("f", ":", FUNCTION_DECLARATION) );
 
 ASSIGNMENT = ( IDENTIFIER, "is", ( VALUE | ( "list", "of", { VALUE } ) | ( "load" , STRING ) | IDENTIFIER ) )
 
-FUNCTION_DECLARATION = FUNCTION_TYPE, "as", IDENTIFIER, [ "needs", { IDENTIFIER } ], "with", ( ( FUNCTION_VARIABLE_DECLARATION, { "and", FUNCTION_VARIABLE_DECLARATION } ) | ( "\n", FUNCTION_VARIABLE_DECLARATION, "\n", { "and", FUNCTION_VARIABLE_DECLARATION, "\n" }, "end" ) ) ;
+FUNCTION_DECLARATION = FUNCTION_TYPE, "as", IDENTIFIER, [ "needs", { IDENTIFIER } ], "with", "\n", FUNCTION_VARIABLE_DECLARATION, {"and", "\n", FUNCTION_VARIABLE_DECLARATION, "\n" }, "end";
 
 FUNCTION_VARIABLE_DECLARATION = IDENTIFIER, "as", ( VALUE | IDENTIFIER );
 
@@ -31,7 +31,7 @@ LOOP_STATEMENT = "for", "each", IDENTIFIER, "in", IDENTIFIER, PERFORM_STATEMENT;
 
 CONDITIONAL_STATEMENT = "on", CONDITION, PERFORM_STATEMENT;
 
-PERFORM_STATEMENT = "perform", ( IDENTIFIER | FUNCTION_TYPE ), [ "with", FUNCTION_VARIABLE_DECLARATION, { FUNCTION_VARIABLE_DECLARATION } ];
+PERFORM_STATEMENT = "perform", ( IDENTIFIER | FUNCTION_TYPE ), [ ("with", FUNCTION_VARIABLE_DECLARATION, { "and", FUNCTION_VARIABLE_DECLARATION }) | ("with", "use", IDENTIFIER) ];
 
 CONDITION = ( ( IDENTIFIER | VALUE | FIND ), COMPARE_METHODS, ( IDENTIFIER | VALUE | FIND ) );
 
@@ -111,10 +111,10 @@ for each security_group in security_groups_config perform SecurityGroupBuilder w
 
 ## Execute Functions
 # Default Functions
-perform InstanceBuilder with intance_configuration_type_2
+perform InstanceBuilder with use intance_configuration_type_2
 
 # User defined Functions
-perform autoscaling_type1 with intance_configuration_type_1
+perform autoscaling_type1 with use intance_configuration_type_1
 
 ## Conditional Statements
 on find CPUUtilization of find name of intance_configuration_type_2 gt scale_up_factor + scale_trashold perform EmailSender with Template as CPUUsageWarning and Subject as "Type 2 - CPU Usage Warning"
