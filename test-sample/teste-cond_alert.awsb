@@ -1,0 +1,9 @@
+KEY_ID is "[YOUR_KEY_ID]"
+SECRET_KEY is "[YOUR_SECRET_KEY]"
+
+treshhold_limit is 90
+instance_1_id is "i-092990761db1e7ca1"
+
+START_BUILD
+    on CPUUtilization >= treshhold_limit in instance_1_id alert
+END_BUILD

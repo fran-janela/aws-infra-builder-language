@@ -1,0 +1,23 @@
+KEY_ID is "[YOUR_KEY_ID]"
+SECRET_KEY is "[YOUR_SECRET_KEY]"
+
+general_instance_description is "General Description"
+
+function InstanceBuilder as instance_builder_type1 with
+    instance_type as "t2.medium"
+end
+
+START_BUILD
+    perform SecurityGroupBuilder with
+        sg_name as "Teste SG" and
+        sg_description as general_instance_description . " for SecGroup " and
+        ingress_port as 22 and
+        ingress_protocol as "tcp"
+    end
+    perform instance_builder_type1 with
+        instance_name as "Teste 1"
+    end
+    for i in 1:(2*1) perform InstanceBuilder with
+        instance_name as "Teste 2 (" . (i + 4) . ")"
+    end
+END_BUILD

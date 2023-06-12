@@ -1,21 +1,31 @@
 from abc import abstractmethod
 import re
-import sys
+import sys, os
 
 #===============================================================================
 #                              GLOBALS
 #===============================================================================
 RESERVED_WORDS = ["end", "Int", "String", "function", "and", "for", "as", "is", "in", "with", "needs", "perform", "on", "alert", "START_BUILD", "END_BUILD"]
 FUNC_NAMES = ["InstanceBuilder", "SecurityGroupBuilder"]
-FUNC_ARGS = ["sg_name", "sg_description", "sg_id", "instance_name", "instance_description"]
+FUNC_ARGS = ["sg_name", "sg_description", "sg_id", "instance_name", "ami", "instance_type", "ingress_port", "ingress_protocol", "ingress_description", "egress_port", "egress_protocol"]
 MONITERING_METRICS = ["CPUUtilization", "NetworkPacketsIn", "NetworkPacketsOut", "DiskReadOps", "DiskWriteOps"]
 COMPARISON_OPERATORS = [">", "<", "<=", ">="]
 COMPARISON_OPERATORS_CODE = {"<": "LessThanThreshold", ">": "GreaterThanThreshold", "<=": "LessThanOrEqualToThreshold", ">=": "GreaterThanOrEqualToThreshold"}
 
-FUNC_NEEDS = {"InstanceBuilder": (["instance_name"], ["instance_description", "sg_id"]), "SecurityGroupBuilder": (["sg_name"], ["sg_description"])}
+FUNC_NEEDS = {"InstanceBuilder": (["instance_name"], ["ami", "instance_type", "sg_id"]), "SecurityGroupBuilder": (["sg_name", "ingress_port", "ingress_protocol"], ["ingress_description", "egress_port", "egress_protocol", "sg_description"])}
 
 FILE_LOC = sys.argv[1].split(".")[0]
 FILE_NAME = FILE_LOC.split("/")[-1]
+
+if not os.path.exists("out/" + FILE_NAME + "/"):
+    os.makedirs("out/" + FILE_NAME + "/")
+    PATH = "out/" + FILE_NAME + "/"
+else:
+    i = 1
+    while os.path.exists("out/" + FILE_NAME + "(" + str(i) + ")" + "/"):
+        i += 1
+    os.makedirs("out/" + FILE_NAME + "(" + str(i) + ")" + "/")
+    PATH = "out/" + FILE_NAME + "(" + str(i) + ")" + "/"
 
 #===============================================================================
 #                              TOKENIZER
@@ -161,38 +171,99 @@ functionTable = FunctionTable()
 #===============================================================================
 #                              FUNCTIONS
 #===============================================================================
-def build_instance(args):
-    print("Building instance with args: {}".format(args))
-    print("Instance built successfully!")
+class InstanceBuilder():
+    i = 1
 
-def build_security_group(args):
-    print("Building security group with args: {}".format(args))
-    print("Security group built successfully!")
+    def build_instance(args):
+        print("Building instance with args: {}".format(args))
+        with open(PATH + "instance.tf", "a") as f:
+            f.write("resource \"aws_instance\" \"instance" + str(InstanceBuilder.i) +"\" {\n")
+            f.write("\tami = \"" + args["ami"] + "\"\n")
+            f.write("\tinstance_type = \"" + args["instance_type"] + "\"\n")
+            if args["sg_id"] != None:
+                f.write("\tsecurity_groups = [\"" + args["sg_id"] + "\"]\n")
+            f.write("\ttags = {\n\t\tName = \"" + args["instance_name"] + "\"\n\t}\n")
+            f.write("}\n\n")
+            InstanceBuilder.i += 1
+        print("Instance built successfully!\n")
+
+class SecurityGroupBuilder():
+    i = 1
+
+    def build_security_group(args):
+        print("Building security group with args: {}".format(args))
+        with open(PATH + "security_group.tf", "a") as f:
+            f.write("resource \"aws_security_group\" \"sg" + str(SecurityGroupBuilder.i) + "\" {\n")
+            f.write("\tname = \"" + args["sg_name"] + "\"\n")
+            if args["sg_description"] != None:
+                f.write("\tdescription = \"" + args["sg_description"] + "\"\n")
+            f.write("\tingress {\n\t\tfrom_port = " + str(args["ingress_port"]) + "\n\t\tto_port = " + str(args["ingress_port"]) + "\n\t\tprotocol = \""+ str(args["ingress_protocol"]) +"\"\n\t\tcidr_blocks = [\"0.0.0.0/0\"]\n\t}\n")
+            f.write("\tegress {\n\t\tfrom_port = " + str(args["egress_port"]) + "\n\t\tto_port = " + str(args["egress_port"]) + "\n\t\tprotocol = \""+ str(args["egress_protocol"]) +"\"\n\t\tcidr_blocks = [\"0.0.0.0/0\"]\n\t}\n")
+            f.write("}\n\n")
+        print("Security group built successfully!\n")
 
 
 def append_new_function(name, declared_args):
     if name == "InstanceBuilder":
-        instance_builder_args = {"instance_name": None, "instance_description": None, "sg_id": None}
+        instance_builder_args = {"instance_name": None, "instance_description": None, "sg_id": None, "ami": "ami-00a0e0b890ae17d65", "instance_type": "t2.micro"}
         for arg in declared_args:
             instance_builder_args[arg] = declared_args[arg]
-        build_instance(instance_builder_args)
+        InstanceBuilder.build_instance(instance_builder_args)
 
     elif name == "SecurityGroupBuilder":
-        security_group_builder_args = {"sg_name": None, "sg_description": None}
+        security_group_builder_args = {"sg_name": None, "sg_description": None, "ingress_port": None, "ingress_protocol": None, "egress_port": 0, "egress_protocol": "-1"}
         for arg in declared_args:
             security_group_builder_args[arg] = declared_args[arg]
-        build_security_group(security_group_builder_args)
+        SecurityGroupBuilder.build_security_group(security_group_builder_args)
 
-def create_alert(monitoring_metric, comparisson_operator, treshhold):
-    converted_comparisson_operator = COMPARISON_OPERATORS_CODE[comparisson_operator]
-    print("Creating alert with monitoring metric: {}, comparisson operator: {} and treshhold: {}".format(monitoring_metric, converted_comparisson_operator, treshhold))
-    print("Alert created successfully!")
+class AlertBuilder():
+    i = 1
+
+    def create_alert(monitoring_metric, comparisson_operator, treshhold, instance_id):
+        converted_comparisson_operator = COMPARISON_OPERATORS_CODE[comparisson_operator]
+        print("Creating alert with monitoring metric: {}, comparisson operator: {} and treshhold: {}".format(monitoring_metric, converted_comparisson_operator, treshhold))
+        with open(PATH + "alert.tf", "a") as f:
+            f.write("resource \"aws_cloudwatch_metric_alarm\" \"alarm" + str(AlertBuilder.i) + "\" {\n")
+            f.write("\talarm_name = \"alarm" + str(AlertBuilder.i) + "\"\n")
+            f.write("\tcomparison_operator = \"" + converted_comparisson_operator + "\"\n")
+            f.write("\tevaluation_periods = 1\n")
+            f.write("\tmetric_name = \"" + monitoring_metric + "\"\n")
+            f.write("\tnamespace = \"AWS/EC2\"\n")
+            f.write("\tperiod = 120\n")
+            f.write("\tstatistic = \"Average\"\n")
+            f.write("\tthreshold = " + str(treshhold) + "\n")
+            f.write("\tinsufficient_data_actions = []\n")
+            f.write("\tdimensions = {\n")
+            f.write("\t\tInstanceId = \""+ instance_id +"\"\n")
+            f.write("\t}\n")
+            f.write("}\n\n")
+        print("Alert created successfully!\n")
+
+
 
 def create_provider_file(symbolTable: SymbolTable):
-    key_id = symbolTable.getter("KEY_ID")
-    secret_key = symbolTable.getter("SECRET_KEY")
+    key_id = symbolTable.getter("KEY_ID")[1]
+    secret_key = symbolTable.getter("SECRET_KEY")[1]
     region = "us-east-1"
-    print("Creating provider file with key id: {}, secret key: {} and region: {}".format(key_id, secret_key, region))
+    print("Creating provider file with key id: {}, secret key: {} and region: {}\n".format(key_id, secret_key, region))
+    with open(PATH + "main.tf", "w") as f:
+        f.write("""
+        terraform {\n
+        \t required_providers {\n
+        \t\t aws = {\n
+        \t\t\t source = "hashicorp/aws"\n
+        \t\t\t version = "~> 4.16"\n
+        \t\t }\n
+        \t }\n
+        \t required_version = ">= 1.2.0"\n
+        }\n\n
+        provider "aws" {\n
+        \t region = \"""" + region + """\"\n
+        \t access_key = \"""" + key_id + """\"\n
+        \t secret_key = \"""" + secret_key + """\"\n
+        }\n\n
+        """)
+    print("Main file created successfully!\n")
 
 
 
@@ -277,9 +348,9 @@ class FuncCall(Node):
             func_dec_node = functionTable.getter(self.value)
             func_name = func_dec_node.value
             for i in range(1, len(func_dec_node.children)):
-                func_total_args_declaraed[func_dec_node.children[i].value] = func_dec_node.children[i].children[0].evaluate(symbolTable)
+                func_total_args_declaraed[func_dec_node.children[i].value] = func_dec_node.children[i].children[0].evaluate(symbolTable)[1]
         for i in range(len(self.children)):
-            func_total_args_declaraed[self.children[i].value] = self.children[i].children[0].evaluate(symbolTable)
+            func_total_args_declaraed[self.children[i].value] = self.children[i].children[0].evaluate(symbolTable)[1]
 
         for i in range(len(FUNC_NEEDS[func_name][0])):
             if FUNC_NEEDS[func_name][0][i] not in func_total_args_declaraed.keys():
@@ -298,7 +369,6 @@ class ForNode(Node):
     def evaluate(self, symbolTable: SymbolTable):
         min_value = self.children[0].evaluate(symbolTable)
         max_value = self.children[1].evaluate(symbolTable)
-        print(min_value, max_value)
         if min_value[0] != "Int" or max_value[0] != "Int":
             sys.stderr.write("Type mismatch for For arguments")
             sys.exit()
@@ -311,18 +381,30 @@ class ForNode(Node):
 class OnNode(Node):
     def evaluate(self, symbolTable: SymbolTable):
         value = self.children[0].evaluate(symbolTable)
+        instance_id = self.children[1].evaluate(symbolTable)
         if value[0] != "Int":
             sys.stderr.write("Type mismatch for On argument")
             sys.exit()
-        create_alert(self.value[0], self.value[1], value[1])
+        if instance_id[0] != "String":
+            sys.stderr.write("Type mismatch for On argument")
+            sys.exit()
+        AlertBuilder.create_alert(self.value[0], self.value[1], value[1], instance_id[1])
 
 
 #===============================================================================
 #                              PREPRO
 #===============================================================================
-
 class PrePro():
     def filter(source):
+        # create folder infrastructure 
+        with open(PATH + "instance.tf", "w") as f:
+            f.write("")
+        with open(PATH + "alert.tf", "w") as f:
+            f.write("")
+        with open(PATH + "main.tf", "w") as f:
+            f.write("")
+        with open(PATH + "security_group.tf", "w") as f:
+            f.write("")
         # using regex, remove all comments
         source = re.sub(r"#.*\n", "\n", source)
         source = re.sub(r"#.*", "", source)
@@ -401,12 +483,10 @@ class Parser():
     def parseDecStatement():
         ### *+   VAR   +* ###
         if Parser.tokenizer.next.type == "ID":
-            print("VAR")
             id = Parser.tokenizer.next.value
             Parser.tokenizer.selectNext()
             if Parser.tokenizer.next.type == "is":
                 Parser.tokenizer.selectNext()
-                print("saved a VarDec in declaration")
                 return VarDec(id, [Parser.parseExpression()])
             else:
                 sys.stderr.write("Expected is - received: " + Parser.tokenizer.next.type)
@@ -442,7 +522,6 @@ class Parser():
                                 sys.stderr.write("Expected as")
                                 sys.exit(1)
                             Parser.tokenizer.selectNext()
-                            print("saved a argument to function - ", func_arg)
                             func_children.append(VarDec(func_arg, [Parser.parseExpression()]))
                             Parser.tokenizer.selectNext()
                             if Parser.tokenizer.next.type != "ENDLINE":
@@ -463,7 +542,6 @@ class Parser():
                                         sys.stderr.write("Expected as")
                                         sys.exit(1)
                                     Parser.tokenizer.selectNext()
-                                    print("saved a argument to function - ", func_arg)
                                     func_children.append(VarDec(func_arg, [Parser.parseExpression()]))
                             else:
                                 Parser.tokenizer.selectNext()
@@ -474,7 +552,6 @@ class Parser():
                         if Parser.tokenizer.next.type != "ENDLINE":
                             sys.stderr.write("Expected ENDLINE")
                             sys.exit(1)
-                        print("saved a FuncDec in declaration")
                         return FuncDec(func_name, func_children)
                     else:
                         sys.stderr.write("Expected as")
@@ -483,7 +560,6 @@ class Parser():
                     sys.stderr.write("Expected ID")
                     sys.exit(1)
         elif Parser.tokenizer.next.type == "START_BUILD":
-            print("identified START_BUILD")
             Parser.tokenizer.selectNext()
             if Parser.tokenizer.next.type != "ENDLINE":
                 sys.stderr.write("Expected ENDLINE")
@@ -545,10 +621,15 @@ class Parser():
             comparison_operator = Parser.tokenizer.next.value
             Parser.tokenizer.selectNext()
             expression = Parser.parseExpression()
+            if Parser.tokenizer.next.type != "in":
+                sys.stderr.write("Expected in")
+                sys.exit(1)
+            Parser.tokenizer.selectNext()
+            instance_id = Parser.parseExpression()
             if Parser.tokenizer.next.type != "alert":
                 sys.stderr.write("Expected alert")
                 sys.exit(1)
-            return OnNode((monitoring_metric, comparison_operator), [expression])
+            return OnNode((monitoring_metric, comparison_operator), [expression, instance_id])
         else:
             sys.stderr.write("Not a Build Statement - " + Parser.tokenizer.next.type)
             sys.exit(1)
@@ -579,17 +660,15 @@ class Parser():
                 sys.stderr.write("Expected as")
                 sys.exit(1)
             Parser.tokenizer.selectNext()
-            print("saved a argument to function - ", func_arg)
             func_children.append(VarDec(func_arg, [Parser.parseExpression()]))
             if Parser.tokenizer.next.type != "ENDLINE":
-                print("more than one argument to function")
-                while Parser.tokenizer.next.type != "end":
+                while Parser.tokenizer.next.type != "ENDLINE":
                     if Parser.tokenizer.next.type != "and":
                         sys.stderr.write("Expected and" + Parser.tokenizer.next.type)
                         sys.exit(1)
                     Parser.tokenizer.selectNext()
                     if Parser.tokenizer.next.type != "ENDLINE":
-                        sys.stderr.write("Expected ENDLINE")
+                        sys.stderr.write("Expected ENDLINE - " + Parser.tokenizer.next.type)
                         sys.exit(1)
                     Parser.tokenizer.selectNext()
                     if Parser.tokenizer.next.type != "FUNC_ARG":
@@ -601,15 +680,11 @@ class Parser():
                         sys.stderr.write("Expected as")
                         sys.exit(1)
                     Parser.tokenizer.selectNext()
-                    print("saved a argument to function - ", func_arg)
                     func_children.append(VarDec(func_arg, [Parser.parseExpression()]))
-                    Parser.tokenizer.selectNext()
-            else:
-                Parser.tokenizer.selectNext()
+            Parser.tokenizer.selectNext()
             if Parser.tokenizer.next.type != "end":
                 sys.stderr.write("Expected end - " + Parser.tokenizer.next.type)
                 sys.exit(1)
-            print("created a FuncCall in build")
             return FuncCall(func_name, func_children)
 
 
@@ -630,8 +705,7 @@ class Parser():
         symbolTable = SymbolTable()
         result.evaluate(symbolTable)
         create_provider_file(symbolTable)
-
-
+        print("Compilation OK\n")
 
 
 # =================================================================
