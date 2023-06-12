@@ -13,45 +13,21 @@ Definido o contexto e a aplicação, as próximas etapas serão de construção 
 Utilizando o exemplo de linguagem, a EBNF resultante para a linguagem é a seguinte:
 
 ```bash
-BLOCK = { STATEMENT };
+BLOCK = { DECLARATION_STATEMENT };
 
-STATEMENT = [ DECLARATION | ( "START BUILD", { BUILD_STATEMENT }, "END BUILD" ) ], "\n";
+DECLARATION_STATEMENT = [ (IDENTIFIER, "is", EXPRESSION) | ("function", FUNC_NAME, "as", IDENTIFIER, "with", "\n", [ FUNC_ARG , "as", EXPRESSION , { "and" , "\n , FUNC_ARG , "as", EXPRESSION} , "\n" ], "end") | ( "START_BUILD", "\n", { BUILD_STATEMENT }, "END_BUILD" ) ] , "\n" ;
 
-DECLARATION = ( ASSIGNMENT | ("f", ":", FUNCTION_DECLARATION) );
+BUILD_STATEMENT = [ ([ "for" , IDENTIFIER, "in", EXPRESSION, ":", EXPRESSION] , PERFORM_STATEMENT) | ( "on" , MONITERING_METRIC, COMPARISON_OPERATOR, EXPRESSION, "in", EXPRESSION, "alert") ], "\n";
 
-ASSIGNMENT = ( IDENTIFIER, "is", ( VALUE | ( "list", "of", { VALUE } ) | ( "load" , STRING ) | IDENTIFIER ) )
+PERFORM_STATEMENT = "perform", ( IDENTIFIER | FUNC_NAME ), "with", "\n", [ FUNC_ARG , "as", EXPRESSION , { "and" , "\n , FUNC_ARG , "as", EXPRESSION} , "\n" ], "end";
 
-FUNCTION_DECLARATION = FUNCTION_TYPE, "as", IDENTIFIER, [ "needs", { IDENTIFIER } ], "with", "\n", FUNCTION_VARIABLE_DECLARATION, {"and", "\n", FUNCTION_VARIABLE_DECLARATION, "\n" }, "end";
+EXPRESSION = TERM, { ("+" | "-" | "."), TERM } ;
 
-FUNCTION_VARIABLE_DECLARATION = IDENTIFIER, "as", ( VALUE | IDENTIFIER );
+TERM = FACTOR, { ("*" | "/"), FACTOR } ;
 
-BUILD_STATEMENT = ( LOOP_STATEMENT | CONDITIONAL_STATEMENT | PERFORM_STATEMENT );
-
-LOOP_STATEMENT = "for", "each", IDENTIFIER, "in", IDENTIFIER, PERFORM_STATEMENT;
-
-CONDITIONAL_STATEMENT = "on", CONDITION, PERFORM_STATEMENT;
-
-PERFORM_STATEMENT = "perform", ( IDENTIFIER | FUNCTION_TYPE ), [ ("with", FUNCTION_VARIABLE_DECLARATION, { "and", FUNCTION_VARIABLE_DECLARATION }) | ("with", "use", IDENTIFIER) ];
-
-CONDITION = ( ( IDENTIFIER | VALUE | FIND ), COMPARE_METHODS, ( IDENTIFIER | VALUE | FIND ) );
-
-COMPARE_METHODS = ( "gt" | "lt" | "et" | "net" | "gte" | "lte" );
-
-FUNCTION_TYPE = ( "AutoScaleBuilder" | "LoadBalancerBuilder" | "InstanceBuilder" | "SubnetBuilder" | "SecurityGroupBuilder" | "EmailSender" );
-
-FIND = "find", IDENTIFIER, "of", ( FIND | IDENTIFIER );
-
-VALUE = ( STRING | EXPRESSION );
-
-EXPRESSION = TERM, { ("+" | "-"), TERM } ;
-
-TERM = FACTOR, { "*", FACTOR } ;
-
-FACTOR = NUMBER | "(", EXPRESSION, ")" | IDENTIFIER ;
+FACTOR = NUMBER | STRING | "(", EXPRESSION, ")" | IDENTIFIER | ("+" | "-"), FACTOR;
 
 IDENTIFIER = ( LETTER, { LETTER | DIGIT | "_" } ) | (KNOWN_IDENTIFIERS);
-
-KNOWN_IDENTIFIERS = ( "CPUUtilization" | "RAMUsage" | "AvailableMemorySpace" );
 
 STRING = '"', { LETTER | DIGIT | " " | "." | "," | ":" | ";" | "-" | "_" | "/" | "\\" | "!" | "?" | "@" | "#" | "$" | "%" | "&" | "*" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "=" | "+" | "~" | "^" | "`" }, '"' ;
 
@@ -61,89 +37,78 @@ LETTER = ( a | ... | z | A | ... | Z ) ;
 
 DIGIT = ( 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 ) ;
 
+FUNC_NAME = ( "InstanceBuilder" | "SecurityGroupBuilder" );
+
+FUNC_ARG = ( "sg_name" | "sg_description" | "sg_id" | "instance_name" | "ami" | "instance_type" | "ingress_port" | "ingress_protocol" | "ingress_description" | "egress_port" | "egress_protocol" );
+
+MONITERING_METRIC = ( "CPUUtilization" | "NetworkPacketsIn" | "NetworkPacketsOut" | "DiskReadOps" | "DiskWriteOps" );
+
+COMPARISON_OPERATOR = ( ">" | "<" | "<=" | ">=" );
+
 ```
 
 ## 3. Exemplo da Linguagem
 
-Abaixo, tem-se um exemplo de código para a linguagem:
+Abaixo, tem-se dois exemplos de código para a linguagem:
 
 ```
-# Must define variables
-Infrastructure is "sample"
-Provider is load ".env"
-EmailSendTo is "email@example.com"
+# Must define AWS KEY variables
+KEY_ID is "[YOUR_KEY_ID]"
+SECRET_KEY is "[YOUR_SECRET_KEY]"
 
-# Scale Factor:
-monitoring is CPUUtilization
-scale_up_factor is 60
-scale_down_factor is 20
-scale_trashold is 20
+general_instance_description is "General Description"
 
-# Subnet Variables
-subnet_ips is list of "172.16.11.0/24", "172.16.12.0/24", "172.16.13.0/24"
-
-# Security Group Variables
-security_groups_config is load "security_group.json"
-
-# Instance Configuration Variables
-intance_configuration_type_1 is load "instance_configuration_type1.json"
-intance_configuration_type_2 is load "instance_configuration_type2.json"
-
-# Other Variables
-CPUUsageWarning is load "cpu_usage_warning.html"
-
-## Defining Functions
-# AutoScaling Function
-f: AutoScaleBuilder as autoscaling_type1 needs InstanceConfigurationType with
-    Name as type1 and
-    Size as list of 1, 2, 5 and
-    SubnetIPS as subnet_ips and
-    Monitoring as monitoring and
-    ScaleFactor as list of scale_up_factor, scale_down_factor
+function InstanceBuilder as instance_builder_type1 with
+    instance_type as "t2.medium"
 end
 
-# Must have START mark
-START BUILD
+START_BUILD
+    perform SecurityGroupBuilder with
+        sg_name as "Teste SG" and
+        sg_description as general_instance_description . " for SecGroup " and
+        ingress_port as 22 and
+        ingress_protocol as "tcp"
+    end
+    perform instance_builder_type1 with
+        instance_name as "Teste 1"
+    end
+    for i in 1:(2*1) perform InstanceBuilder with
+        instance_name as "Teste 2 (" . (i + 4) . ")"
+    end
+END_BUILD
+```
+<br/>
 
-## Loops
-for each subnet_ip in subnet_ips perform SubnetBuilder with SubnetIp as subnet_ip
-for each security_group in security_groups_config perform SecurityGroupBuilder with SecurityGroupConfig as security_group
+```
+KEY_ID is "[YOUR_KEY_ID]"
+SECRET_KEY is "[YOUR_SECRET_KEY]"
 
-## Execute Functions
-# Default Functions
-perform InstanceBuilder with use intance_configuration_type_2
+treshhold_limit is 90
+instance_1_id is "i-092990761db1e7ca1"
 
-# User defined Functions
-perform autoscaling_type1 with use intance_configuration_type_1
-
-## Conditional Statements
-on find CPUUtilization of find name of intance_configuration_type_2 gt scale_up_factor + scale_trashold perform EmailSender with Template as CPUUsageWarning and Subject as "Type 2 - CPU Usage Warning"
-
-# Must have END mark
-END BUILD
+START_BUILD
+    on CPUUtilization >= treshhold_limit in instance_1_id alert
+END_BUILD
 ```
 
 Vale ressaltar alguns detalhes importantes:
 
-1. Existem variáveis que precisam ser inseridas no arquivo, uma vez que são estas que irão compor os meta-dados obrigatórios.
+1. Existem variáveis que precisam ser inseridas no arquivo, uma vez que são estas que irão compor os meta-dados obrigatórios. São elas a `KEY_ID` e a `SECRET_KEY`.
 <br/>
 
-2. Existem apenas 2 tipos de variáveis: `string` e `number`. Além disso, elas podem constituir uma lista, de um único tipo.
+2. Existem apenas 2 tipos de variáveis: `string` e `number`.
 <br/>
 
-3. É possível complementar a linguagem e as variáveis com a função load, que poderá carregar arquivos externos. Um uso que será de extrema importância é o carregamento de arquivos JSON, que serão utilizados para a criação de instâncias, subnets, security groups, etc. Isto ocorre pois estes podem conter as informações para as variáveis dependentes das funções.
+3. Não é possível criar funções genéricas, elas já são pré-definidas, no entanto, dá-se a possibilidade de usar a declaração de função para poder predefinir alguns parâmetros essenciais e reformatar as necessidades da função base, dando a ela um novo identificador.
 <br/>
 
-4. Não é possível criar funções genéricas, elas já são pré-definidas, no entanto, dá-se a possibilidade de usar a declaração de função para poder predefinir alguns parâmetros essenciais e reformatar as necessidades da função base, dando a ela um novo identificador.
+4. A preposição `perform` será a base para definir a execução de uma ação.
 <br/>
 
-5. A linguagem não possui um tipo de dado booleano, mas é possível utilizar as comparações para obter o mesmo resultado. Vale lembrar que não é possível utilizar a resposta negativa da comparação, como seria nas linguagens de programação.
+5. O `loop` existente na linguagem é o `for`, que é utilizado para definir um range de inteiros entre dois valores incluindo o primeiro até menor que o segundo, variando em adições de 1.
 <br/>
 
-6. A preposição `perform` será a base para definir a execução de uma ação.
-<br/>
+6. A linguagem é case-sensitive, ou seja, diferencia letras maiúsculas de minúsculas.
 
-7. A preposição `find` será a base para encontrar métricas específicas da infraestrutura, como por exemplo, a CPUUtilization de uma instância específica, mas também para encontrar o valor de um identificador de dentro de um JSON, caso haja necessidade. As métricas específicas possuem uma necessidade específica para encontrarem o que se procura, devendo ser respeitada depois do `of`, no exemplo acima, a métrica é `CPUUtilization` e precisa do nome da instância para coletar as suas informações.
-<br/>
+7. A estrutura condicional da linguagem é utilizada somente para criar os alarmes em função de métricas que podem ser avaliadas.
 
-8. O `loop` existente na linguagem é o `for each`, que é utilizado para percorrer uma lista ou um JSON de valores e executar uma ação para cada um deles.
