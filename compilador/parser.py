@@ -5,14 +5,14 @@ class Parser():
         # add all lexer tokens to parser
         self.pg = ParserGenerator(["OPEN_PAREN", "CLOSE_PAREN", "SUM", "SUB", "MUL",
                                     "IS", "AS", "LIST", "OF", "LOAD", "NEEDS", 
-                                   "WITH", "AND", "END", "FIND", "GT", "LT", "ET", 
-                                   "NET", "GTE", "LTE", "FUNC_TYPE", "FOR", "IN", 
-                                   "FUNC_DEC", "START_BUILD", "END_BUILD", "IDENTIFIER", 
-                                   "NUMBER", "STRING", "NEWLINE", "COMMA", "ON", 
-                                   "PERFORM", "USE"], 
-                                   precedence=[
+                                    "WITH", "AND", "END", "FIND", "GT", "LT", "ET", 
+                                    "NET", "GTE", "LTE", "FUNC_TYPE", "FOR", "IN", 
+                                    "FUNC_DEC", "START_BUILD", "END_BUILD", "IDENTIFIER", 
+                                    "NUMBER", "STRING", "NEWLINE", "COMMA", "ON", 
+                                    "PERFORM", "USE"], 
+                                    precedence=[
                                     ('left', ['SUM', 'SUB']),
-                                    ('left', ['MUL', 'DIV'])
+                                    ('left', ['MUL'])
                                     ])
         
         
@@ -44,18 +44,10 @@ class Parser():
         def assignment(p):
             return p
         
-        @self.pg.production("function_declaration : FUNC_TYPE AS IDENTIFIER function_needs function_body")
-        @self.pg.production("function_declaration : FUNC_TYPE AS IDENTIFIER function_body")
+        @self.pg.production("function_declaration : FUNC_TYPE AS IDENTIFIER NEEDS identifiers WITH NEWLINE function_variable_declarations END")
+        @self.pg.production("function_declaration : FUNC_TYPE AS IDENTIFIER WITH NEWLINE function_variable_declarations END")
         def function_declaration(p):
             return p
-        
-        @self.pg.production("function_needs : NEEDS identifiers")
-        def function_needs(p):
-            return p[1]
-        
-        @self.pg.production("function_body : WITH NEWLINE function_variable_declarations END")
-        def function_body(p):
-            return p[2]
         
         @self.pg.production("function_variable_declarations : function_variable_declaration NEWLINE")
         @self.pg.production("function_variable_declarations : function_variable_declaration AND NEWLINE function_variable_declarations")

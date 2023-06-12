@@ -6,17 +6,12 @@ text_input = open('tests/teste2.txt', 'r').read()
 lexer = Lexer().get_lexer()
 tokens = lexer.lex(text_input)
 
-# for token in tokens:
-#     print(token)
+for token in tokens:
+    print(token)
 
 pg = Parser()
 pg.parse()
 parser = pg.get_parser()
-
-
-def get_tokens(token_list):
-    for token in token_list:
-        yield token
 
 
 try:

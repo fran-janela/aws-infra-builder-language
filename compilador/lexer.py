@@ -66,7 +66,7 @@ class Lexer():
 
         # Values
         self.lg.add('NUMBER', r'-?\d+')
-        self.lg.add('STRING', r'\".*\"')
+        self.lg.add('STRING', r'"[^"]*"')
 
         # Newline
         self.lg.add('NEWLINE', r"\n")
